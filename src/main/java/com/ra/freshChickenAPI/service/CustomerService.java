@@ -2,21 +2,32 @@ package com.ra.freshChickenAPI.service;
 
 
 import com.ra.freshChickenAPI.entity.Customer;
+import com.ra.freshChickenAPI.entity.Order;
 import com.ra.freshChickenAPI.repository.CustomerRepository;
+import com.ra.freshChickenAPI.repository.OrderRepository;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Optional;
 
 @Service
 public class CustomerService {
-    
+
     @Autowired
     private CustomerRepository customerRepository;
-    
+
+    @Autowired
+    private OrderRepository orderRepository;
+
     public List<Customer> getAllCustomers() {
         return customerRepository.findAll();
+    }
+
+    public Page<Customer> getAllCustomers(Pageable pageable) {
+        return customerRepository.findAll(pageable);
     }
     
     public Optional<Customer> getCustomerById(Long id) {
@@ -51,5 +62,9 @@ public class CustomerService {
     
     public Optional<Customer> getCustomerByPhone(String phone) {
         return customerRepository.findByPhone(phone);
+    }
+
+    public List<Order> getCustomerOrders(Long customerId) {
+        return orderRepository.findByCustomerIdOrderByOrderDateDesc(customerId);
     }
 }

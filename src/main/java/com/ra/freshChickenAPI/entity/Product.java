@@ -27,7 +27,7 @@ public class Product {
     private BigDecimal price;
     
     @Column(nullable = false)
-    private String category; // e.g., "Whole Chicken", "Chicken Pieces", "Processed"
+    private String category; // e.g., "Chicken", "Country Chicken", "Egg"
     
     private Integer stockQuantity;
     

@@ -1,6 +1,8 @@
 package com.ra.freshChickenAPI.service;
 
+import com.ra.freshChickenAPI.controller.OrderActivityController;
 import com.ra.freshChickenAPI.dto.CreateOrderRequest;
+import com.ra.freshChickenAPI.dto.OrderActivityMessage;
 import com.ra.freshChickenAPI.dto.OrderItemRequest;
 import com.ra.freshChickenAPI.entity.*;
 import com.ra.freshChickenAPI.repository.AddressRepository;
@@ -8,6 +10,8 @@ import com.ra.freshChickenAPI.repository.CustomerRepository;
 import com.ra.freshChickenAPI.repository.OrderRepository;
 import com.ra.freshChickenAPI.repository.ProductRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,21 +23,40 @@ import java.util.Optional;
 
 @Service
 public class OrderService {
-    
+
     @Autowired
     private OrderRepository orderRepository;
-    
+
     @Autowired
     private CustomerRepository customerRepository;
-    
+
     @Autowired
     private ProductRepository productRepository;
-    
+
     @Autowired
     private AddressRepository addressRepository;
-    
+
+    @Autowired
+    private OrderActivityController orderActivityController;
+
     public List<Order> getAllOrders() {
         return orderRepository.findAll();
+    }
+
+    public Page<Order> getAllOrders(Pageable pageable, OrderStatus status, LocalDateTime dateFrom, LocalDateTime dateTo) {
+        if (status != null && dateFrom != null && dateTo != null) {
+            return orderRepository.findByStatusAndOrderDateBetween(status, dateFrom, dateTo, pageable);
+        } else if (status != null) {
+            return orderRepository.findByStatus(status, pageable);
+        } else if (dateFrom != null && dateTo != null) {
+            return orderRepository.findByOrderDateBetween(dateFrom, dateTo, pageable);
+        } else {
+            return orderRepository.findAll(pageable);
+        }
+    }
+
+    public List<Order> getOrdersByStatuses(List<OrderStatus> statuses) {
+        return orderRepository.findByStatusIn(statuses);
     }
     
     public Optional<Order> getOrderById(Long id) {
@@ -101,8 +124,22 @@ public class OrderService {
         
         order.setOrderItems(orderItems);
         order.setTotalAmount(totalAmount);
-        
-        return orderRepository.save(order);
+
+        Order savedOrder = orderRepository.save(order);
+
+        // Send real-time notification for new order
+        OrderActivityMessage message = new OrderActivityMessage(
+                "ORDER_CREATED",
+                savedOrder.getId(),
+                customer.getName(),
+                savedOrder.getStatus().toString(),
+                null,
+                LocalDateTime.now(),
+                "New order #" + savedOrder.getId() + " placed by " + customer.getName()
+        );
+        orderActivityController.sendOrderActivityNotification(message);
+
+        return savedOrder;
     }
     
     @Transactional
@@ -136,14 +173,30 @@ public class OrderService {
     public Order updateOrderStatus(Long id, OrderStatus status) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Order not found with id: " + id));
-        
+
+        String previousStatus = order.getStatus().toString();
+
         order.setStatus(status);
-        
+
         if (status == OrderStatus.DELIVERED) {
             order.setDeliveryDate(LocalDateTime.now());
         }
-        
-        return orderRepository.save(order);
+
+        Order updatedOrder = orderRepository.save(order);
+
+        // Send real-time notification for status update
+        OrderActivityMessage message = new OrderActivityMessage(
+                "ORDER_STATUS_UPDATED",
+                updatedOrder.getId(),
+                updatedOrder.getCustomer().getName(),
+                status.toString(),
+                previousStatus,
+                LocalDateTime.now(),
+                "Order #" + updatedOrder.getId() + " status changed from " + previousStatus + " to " + status.toString()
+        );
+        orderActivityController.sendOrderActivityNotification(message);
+
+        return updatedOrder;
     }
     
     @Transactional
