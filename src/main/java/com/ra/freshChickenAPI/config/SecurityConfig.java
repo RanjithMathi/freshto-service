@@ -23,19 +23,8 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(authz -> authz
-                // Public endpoints
-                .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers("/api/products/**").permitAll()
-                .requestMatchers("/api/categories/**").permitAll()
-                .requestMatchers("/api/orders/**").permitAll()
-                .requestMatchers("/api/customers/**").permitAll()
-
-                // Admin endpoints - require authentication (TODO: implement proper JWT auth)
-                .requestMatchers("/api/admin/**").permitAll() // Temporarily allow all for development
-
-                // Static resources
-                .requestMatchers("/uploads/**").permitAll()
-                .anyRequest().authenticated()
+                // All endpoints are public - no authentication required
+                .anyRequest().permitAll()
             );
 
         return http.build();
