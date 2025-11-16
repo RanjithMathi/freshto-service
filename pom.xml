@@ -73,6 +73,12 @@
             <artifactId>lombok</artifactId>
             <optional>true</optional>
         </dependency>
+        <dependency>
+    <groupId>com.twilio.sdk</groupId>
+    <artifactId>twilio</artifactId>
+    <version>10.4.1</version>
+</dependency>
+        
         
         <!-- Test Dependencies -->
         <dependency>
